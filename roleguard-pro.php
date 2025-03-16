@@ -12,7 +12,7 @@
  * Requires PHP:      7.2
  * License:           GPL v2 or later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Update URI:        https://github.com/sagorranait/quizify/releases
+ * Update URI:        https://github.com/sagorranait/roleguard-pro/releases
  *
  * Text Domain: roleguard
  * Domain Path: /languages
@@ -56,19 +56,10 @@
 
     public static function install_activation_hook(){        
         $admin_capabilities = get_role('administrator')->capabilities;
-        unset(
-            $admin_capabilities['activate_plugins'], 
-            $admin_capabilities['install_plugins'],
-            $admin_capabilities['edit_plugins'],
-            $admin_capabilities['delete_plugins'],
-            $admin_capabilities['update_plugins'],
-            $admin_capabilities['create_users'],
-            $admin_capabilities['edit_users'],
-            $admin_capabilities['delete_users'],
-            $admin_capabilities['list_users'],
-            $admin_capabilities['promote_users'],
-            $admin_capabilities['remove_users'],
-        );
+        $admin_capabilities['gravityforms_edit_forms'] = true; 
+        $admin_capabilities['gravityforms_view_entries'] = true; 
+        $admin_capabilities['gravityforms_export_entries'] = false; 
+        unset($admin_capabilities['activate_plugins'],$admin_capabilities['install_plugins'],$admin_capabilities['edit_plugins'],$admin_capabilities['delete_plugins'],$admin_capabilities['update_plugins'],$admin_capabilities['create_users'],$admin_capabilities['edit_users'],$admin_capabilities['delete_users'],$admin_capabilities['list_users'],$admin_capabilities['promote_users'],$admin_capabilities['remove_users'],$admin_capabilities['import'],$admin_capabilities['export'],$admin_capabilities['acf/manage_options']);
         add_role('admin', 'Admin', $admin_capabilities);
         flush_rewrite_rules();
     }
@@ -78,8 +69,63 @@
         flush_rewrite_rules();
     }
 
+    public function restrict_admin_role_access() {
+        if ($this->is_custom_admin()) {
+            remove_menu_page('plugins.php');
+            remove_menu_page('users.php');
+            remove_submenu_page('edit.php?post_type=acf-field-group', 'acf-tools');
+            remove_submenu_page('gf_edit_forms', 'gf_export');
+        }
+    }
+
+    public function hide_menus_for_admin_role() {
+        if ($this->is_custom_admin()) {
+            remove_menu_page('plugins.php'); // Hide Plugins menu
+            remove_submenu_page('edit.php?post_type=acf-field-group', 'acf-tools'); // Hide ACF Tools
+            remove_submenu_page('gf_edit_forms', 'gf_export'); // Hide Gravity Forms Import/Export
+        }
+    }
+
+    public function redirect_admin_role_from_restricted_pages() {
+        if ($this->is_custom_admin()) {
+            $restricted_pages = [
+                'plugins.php', 'plugin-install.php', 'plugin-editor.php',
+                'edit.php?post_type=acf-field-group&page=acf-tools',
+                'admin.php?page=gf_export'
+            ];
+            if (in_array($GLOBALS['pagenow'], $restricted_pages) || isset($_GET['page']) && in_array($_GET['page'], ['acf-tools', 'gf_export'])) {
+                wp_redirect(admin_url());
+                exit;
+            }
+        }
+    }
+
+    public function hide_admin_elements() {
+        if ($this->is_custom_admin()) {
+            echo '<style>
+                #menu-plugins, .wp-submenu li a[href*="plugins.php"],
+                a[href*="acf-tools"], a[href*="gf_export"],
+                a.elementor-template-library-export-template {display: none !important;}
+            </style>';
+            echo '<script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    let exportBtns = document.querySelectorAll(".elementor-template-library-export-template");
+                    exportBtns.forEach(btn => btn.parentNode.removeChild(btn));
+                });
+            </script>';
+        }
+    }
+
     public function run() {
-    //    echo "Sagor Rana New plugin";
+        add_action('admin_head', array($this, 'hide_admin_elements'));
+        add_action('admin_init', array($this, 'restrict_admin_role_access'));
+        add_action('admin_menu', array($this, 'hide_menus_for_admin_role'), 999);
+        add_action('admin_init', array($this, 'redirect_admin_role_from_restricted_pages'));
+    }
+
+    private function is_custom_admin() {
+        $user = wp_get_current_user();
+        return in_array('admin', (array) $user->roles);
     }
  }
 
