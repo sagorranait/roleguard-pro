@@ -45,6 +45,10 @@
         return trailingslashit(plugin_dir_path(__FILE__));
     }
 
+    static function assets_url() {
+		return self::plugin_url() . 'assets/';
+	}
+
     public function __construct() {
 		add_action( 'init', array( $this, 'i18n' ) );	
 		add_action( 'plugins_loaded', array( $this, 'run' ));
@@ -88,11 +92,7 @@
 
     public function redirect_admin_role_from_restricted_pages() {
         if ($this->is_custom_admin()) {
-            $restricted_pages = [
-                'plugins.php', 'plugin-install.php', 'plugin-editor.php',
-                'edit.php?post_type=acf-field-group&page=acf-tools',
-                'admin.php?page=gf_export'
-            ];
+            $restricted_pages = ['plugins.php', 'plugin-install.php', 'plugin-editor.php', 'edit.php?post_type=acf-field-group&page=acf-tools', 'admin.php?page=gf_export'];
             if (in_array($GLOBALS['pagenow'], $restricted_pages) || isset($_GET['page']) && in_array($_GET['page'], ['acf-tools', 'gf_export'])) {
                 wp_redirect(admin_url());
                 exit;
@@ -116,10 +116,42 @@
         }
     }
 
+    public function hide_export_template_js_for_non_admins() {
+        if ($this->is_custom_admin()) {
+            echo '<script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    document.querySelectorAll(".export-template").forEach(function(element) {
+                        element.remove();
+                    });
+        
+                    document.querySelectorAll("#elementor-settings-tab-import-export-kit").forEach(function(element) {
+                        element.remove();
+                    });
+        
+                    document.querySelectorAll("#tab-import-export-kit").forEach(function(element) {
+                        element.remove();
+                    });
+
+                    document.querySelectorAll(".elementor-template-library-template-export").forEach(function(element) {
+                        element.remove();
+                    });
+                });
+            </script>';
+        }
+    }
+
+    public function admin_enqueue() {
+        if ($this->is_custom_admin()) {
+            wp_enqueue_style('roleguard-init-admin-css', self::assets_url() . 'css/elementor-hide.css', array(), self::version(), 'all');
+        }
+    }
+
     public function run() {
         add_action('admin_head', array($this, 'hide_admin_elements'));
         add_action('admin_init', array($this, 'restrict_admin_role_access'));
+        add_action( 'wp_enqueue_scripts', array( $this, 'admin_enqueue' ) );
         add_action('admin_menu', array($this, 'hide_menus_for_admin_role'), 999);
+        add_action('admin_footer', array($this, 'hide_export_template_js_for_non_admins'));
         add_action('admin_init', array($this, 'redirect_admin_role_from_restricted_pages'));
     }
 
