@@ -20,26 +20,70 @@
  */
 
  final class Roleguard {
-    static function version() {return '1.0.0';}
-    static function author_name() {return 'Sagor Rana';}
-    static function min_php_version() {return '7.0';}
-    static function plugin_file() {return __FILE__;}
-    static function plugin_url() {return trailingslashit(plugin_dir_url(__FILE__));}
-    static function plugin_dir() {return trailingslashit(plugin_dir_path(__FILE__));}
+
+    static function version() {
+        return '1.0.0';
+    }
+
+    static function author_name() {
+        return 'Sagor Rana';
+    }
+
+    static function min_php_version() {
+        return '7.0';
+    }
+
+    static function plugin_file() {
+        return __FILE__;
+    }
+
+    static function plugin_url() {
+        return trailingslashit(plugin_dir_url(__FILE__));
+    }
+
+    static function plugin_dir() {
+        return trailingslashit(plugin_dir_path(__FILE__));
+    }
 
     public function __construct() {
 		add_action( 'init', array( $this, 'i18n' ) );	
 		add_action( 'plugins_loaded', array( $this, 'run' ));
 	}
 
-    public function i18n(){load_plugin_textdomain('roleguard', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/');}
-    public static function install_activation_hook(){flush_rewrite_rules();}
+    public function i18n(){
+        load_plugin_textdomain('roleguard', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/');
+    }
+
+    public static function install_activation_hook(){        
+        $admin_capabilities = get_role('administrator')->capabilities;
+        unset(
+            $admin_capabilities['activate_plugins'], 
+            $admin_capabilities['install_plugins'],
+            $admin_capabilities['edit_plugins'],
+            $admin_capabilities['delete_plugins'],
+            $admin_capabilities['update_plugins'],
+            $admin_capabilities['create_users'],
+            $admin_capabilities['edit_users'],
+            $admin_capabilities['delete_users'],
+            $admin_capabilities['list_users'],
+            $admin_capabilities['promote_users'],
+            $admin_capabilities['remove_users'],
+        );
+        add_role('admin', 'Admin', $admin_capabilities);
+        flush_rewrite_rules();
+    }
+
+    public static function install_deactivation_hook(){
+        remove_role('admin');
+        flush_rewrite_rules();
+    }
 
     public function run() {
-       echo "Sagor Rana New plugin";
+    //    echo "Sagor Rana New plugin";
     }
  }
 
  new Roleguard();
 
  register_activation_hook( __FILE__, 'Roleguard::install_activation_hook' );
+ register_deactivation_hook( __FILE__, 'Roleguard::install_deactivation_hook' );
