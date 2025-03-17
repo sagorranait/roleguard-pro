@@ -142,6 +142,7 @@
 
     public function admin_enqueue() {
         if ($this->is_custom_admin()) {
+            wp_enqueue_script('elementor-init-admin-js', self::assets_url() . 'js/elementor-scripts.js', array( 'jquery' ), self::version(), true);
             wp_enqueue_style('roleguard-init-admin-css', self::assets_url() . 'css/elementor-hide.css', array(), self::version(), 'all');
         }
     }
