@@ -1,3 +1,8 @@
 button[aria-label="Save Options"] {
     display: none !important;
 }
+
+#elementor-editor-wrapper-v2 header .MuiButtonGroup-root span.MuiBox-root.eui-0 {
+    display: none !important;
+    opacity: 0;
+}
